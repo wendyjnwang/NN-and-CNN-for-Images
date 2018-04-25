@@ -266,11 +266,15 @@ class FullyConnectedNet(object):
                                              self.params['beta%d'%(idx+1)], self.bn_params[idx])                 
             else : 
                 outb = out 
-                cacheb = cache 
-               
+                cacheb = cache       
             out2, cache2 = relu_forward(outb)
-            inputNext = out2
-            caches.extend([cache,cache2,cacheb])
+            if self.use_dropout:
+                outd, cachedd = dropout_forward(out2,self.dropout_param)
+            else: 
+                outd = out2 
+                cachedd = cache         
+            inputNext = outd
+            caches.extend([cache,cache2,cacheb,cachedd])
         scores, cache = affine_forward(inputNext, self.params['W%d'%(idx+2)], self.params['b%d'%(idx+2)])
         caches.append(cache)
 
@@ -310,14 +314,18 @@ class FullyConnectedNet(object):
         grads['b%d'%self.num_layers] = db 
   
         for idx in reversed(range(self.num_layers - 1)):
-            dxr = relu_backward(dx,caches[3*idx+1])
+            dxr = relu_backward(dx,caches[4*idx+1])
+            if self.use_dropout:
+                dxd = dropout_backward(dxr,caches[4*idx+3])
+            else: 
+                dxd = dxr 
             if self.normalization=='batchnorm':
-                dxb, dgamma, dbeta = batchnorm_backward(dxr, caches[3*idx+2])
+                dxb, dgamma, dbeta = batchnorm_backward(dxd, caches[4*idx+2])
             elif self.normalization=='layernorm':
-                dxb, dgamma, dbeta = layernorm_backward(dxr, caches[3*idx+2])
+                dxb, dgamma, dbeta = layernorm_backward(dxd, caches[4*idx+2])
             else : 
-                dxb = dxr 
-            dx, dw, db = affine_backward(dxb, caches[3*idx])      
+                dxb = dxd 
+            dx, dw, db = affine_backward(dxb, caches[4*idx])      
             grads['W%d'%(idx+1)] = dw + self.reg * self.params['W%d'%(idx+1)] 
             grads['b%d'%(idx+1)] = db     
             if self.normalization in ['batchnorm','layernorm']:
