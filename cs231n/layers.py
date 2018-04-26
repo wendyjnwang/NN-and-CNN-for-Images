@@ -509,7 +509,22 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+    N,C,H,W = x.shape
+    F,_,HH,WW = w.shape 
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    Hnew = int(np.floor(1 + (H + 2 * pad - HH) / stride))
+    Wnew = int(np.floor(1 + (W + 2 * pad - WW) / stride))
+    out = np.zeros([N,F,Hnew,Wnew])
+    for f_idx, f in enumerate(w): 
+        for i_idx,img in enumerate(x): 
+            img_padded = np.zeros([C,H+pad*2, W+pad*2])
+            img_padded[:, pad: H+pad, pad: W+pad] = img 
+            for h_idx in range(Hnew):
+                for r_idx in range(Wnew): 
+                    out[i_idx, f_idx,h_idx,r_idx] = np. sum( f * img_padded[:,stride*h_idx:stride*h_idx + HH, stride*r_idx:stride*r_idx + WW]) + b[f_idx]
+                    r_idx +=1
+                h_idx +=1
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -534,7 +549,34 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    x, w, b, conv_param = cache
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    Hnew = int(np.floor(1 + (H + 2 * pad - HH) / stride))
+    Wnew = int(np.floor(1 + (W + 2 * pad - WW) / stride))  
+    x_pad = np.pad(x, pad_width=[(0,), (0,), (pad,), (pad,)], mode='constant', constant_values=0)
+
+    # Shape the numpy arrays
+    dx_pad = np.zeros_like(x_pad) # We will trim the dx's on the paddings later
+    dx = np.zeros_like(x)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+    
+    # db calculation
+    db = np.sum(dout, axis = (0,2,3))
+    
+    #for n in xrange(N):
+    for i in range(Hnew):
+        for j in range(Wnew):
+            selected_x = x_pad[:,:,i*stride : i*stride+HH, j*stride : j*stride+WW]
+            selected_shape = selected_x.shape
+            for k in range(F):
+                dw[k] += np.sum(selected_x*(dout[:,k,i,j])[:,None,None,None], axis=0)
+            dx_pad[:,:,i*stride : i*stride+HH, j*stride : j*stride+WW] +=\
+                                np.einsum('ij,jklm->iklm', dout[:,:,i,j], w)
+    dx = dx_pad[:,:,pad:-pad,pad:-pad]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
