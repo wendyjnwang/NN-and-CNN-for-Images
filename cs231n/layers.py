@@ -606,7 +606,19 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
-    pass
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']    
+    stride = pool_param['stride']
+    N,C,H,W = x.shape
+    Hnew = int(np.floor(1 + (H - pool_height) / stride))
+    Wnew = int(np.floor(1 + (W - pool_width) / stride))   
+    out = np.zeros([N,C,Hnew,Wnew])
+
+    for i in range(Hnew): 
+        for j in range(Wnew):
+            selected_x = x[:,:,i*stride : i*stride+pool_height, j*stride : j*stride+pool_width]
+            out[:,:,i,j] = np.max((selected_x),axis =(2,3))               
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -629,7 +641,23 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
-    pass
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+    
+    Hnew = int(np.floor(1 + (H - pool_height) / stride))
+    Wnew = int(np.floor(1 + (W - pool_width) / stride)) 
+    
+    dx = np.zeros_like(x)
+    for i in range(Hnew):
+        for j in range(Wnew):
+            selected_x = x[:,:,i*stride : i*stride+pool_height, j*stride : j*stride+pool_width]
+            val = np.max(selected_x, axis=(2,3)) 
+            temp_binary = val[:,:,None,None] == selected_x
+            dx[:,:,i*stride : i*stride+pool_height, j*stride : j*stride+pool_width] += temp_binary * (dout[:,:,i,j])[:,:,None,None]
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
