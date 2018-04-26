@@ -686,7 +686,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     - out: Output data, of shape (N, C, H, W)
     - cache: Values needed for the backward pass
     """
-    out, cache = None, None
+    out, cache = None,None
 
     ###########################################################################
     # TODO: Implement the forward pass for spatial batch normalization.       #
@@ -695,11 +695,19 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
-    pass
+
+    # Unroll our matrix:
+    N,C,H,W = x.shape
+    x_unroll = np.swapaxes(x, 0, 1).reshape(C,-1).T
+    out, cache = batchnorm_forward(x_unroll, gamma, beta, bn_param)
+    out = np.swapaxes(out.T.reshape(C,N,H,W),0,1)
+      
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-
+    if cache is None: 
+        cache = {}
+    cache['x_shape'] = x.shape
     return out, cache
 
 
@@ -725,7 +733,13 @@ def spatial_batchnorm_backward(dout, cache):
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
-    pass
+    x_shape = cache['x_shape']
+    x = cache['x']
+    N,C,H,W = x_shape
+    dout_unroll = np.swapaxes(dout,0,1).reshape(C,-1).T
+    dx, dgamma, dbeta = batchnorm_backward(dout_unroll,cache)
+    dx = np.swapaxes(dx.T.reshape(C,N,H,W),0,1)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
